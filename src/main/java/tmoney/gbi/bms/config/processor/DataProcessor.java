@@ -10,12 +10,12 @@ import java.util.List;
 public interface DataProcessor<T> {
 
     /**
-     * 이 프로세서가 주어진 토픽 접두사를 지원하는지 여부를 반환합니다.
+     * 이 프로세서가 주어진 토픽을 지원하는지 여부를 반환합니다.
      *
-     * @param topicPrefix 토픽 접두사
+     * @param topic 토픽
      * @return 지원하면 true, 그렇지 않으면 false
      */
-    boolean supports(String topicPrefix);
+    boolean supports(String topic);
 
     /**
      * byte[] 메시지를 DTO 객체로 변환합니다.

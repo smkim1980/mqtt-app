@@ -21,11 +21,10 @@ public class LocationDataProcessor implements DataProcessor<EncryptedLocationDto
     private final CommonInsertMapper commonInsertMapper;
 
     @Override
-    public boolean supports(String topicPrefix) {
-        // 현재는 모든 토픽에 대해 Location 처리를 한다고 가정합니다.
-        // 향후 다른 DTO가 추가되면, 토픽에 따라 분기하는 로직이 필요합니다.
-        // 예를 들어, topicPrefix.startsWith("obe") || topicPrefix.startsWith("bit") 등으로 구분할 수 있습니다.
-        return true;
+    public boolean supports(String topic) {
+        // "obe" 또는 "bit"로 시작하는 토픽을 지원합니다.
+        return topic.startsWith(tmoney.gbi.bms.common.constant.TopicRuleNames.InfoType.OBE) || 
+               topic.startsWith(tmoney.gbi.bms.common.constant.TopicRuleNames.InfoType.BIT);
     }
 
     @Override

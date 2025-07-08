@@ -20,14 +20,14 @@ public class ProcessorProvider {
     }
 
     /**
-     * 주어진 토픽 접두사를 지원하는 첫 번째 DataProcessor를 반환합니다.
+     * 주어진 토픽을 지원하는 첫 번째 DataProcessor를 반환합니다.
      *
-     * @param topicPrefix 토픽 접두사
+     * @param topic 토픽
      * @return 지원하는 DataProcessor, 없으면 null
      */
-    public DataProcessor<?> getProcessor(String topicPrefix) {
+    public DataProcessor<?> getProcessor(String topic) {
         return processors.stream()
-                .filter(p -> p.supports(topicPrefix))
+                .filter(p -> p.supports(topic))
                 .findFirst()
                 .orElse(null);
     }
