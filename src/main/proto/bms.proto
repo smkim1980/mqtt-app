@@ -1,0 +1,158 @@
+syntax = "proto3";
+
+package tmoney.gbi.proto;
+
+option java_package = "tmoney.gbi.bms.proto";
+option java_outer_classname = "BmsProto";
+option java_multiple_files = true;
+
+import "google/protobuf/timestamp.proto";
+import "options.proto"; // 커스텀 옵션 파일 import
+
+// =======================================================
+// 공통 데이터 타입 정의
+// =======================================================
+
+/**
+ * @brief 부호있는 1Byte 정수형 (Signed Char)
+ * @details 범위: -128 ~ 127
+ */
+message SignedChar {
+  int32 value = 1;
+}
+
+/**
+ * @brief 부호없는 1Byte 정수형 (Unsigned Char)
+ * @details 범위: 0 ~ 255
+ */
+message UnsignedChar {
+  uint32 value = 1;
+}
+
+/**
+ * @brief 부호있는 2Byte 정수형 (Signed Short)
+ * @details 범위: -32768 ~ 32767
+ */
+message SignedShort {
+  int32 value = 1;
+}
+
+/**
+ * @brief 부호없는 2Byte 정수형 (Unsigned Short)
+ * @details 범위: 0 ~ 65535
+ */
+message UnsignedShort {
+  uint32 value = 1;
+}
+
+/**
+ * @brief 명령코드 (Opcode)
+ * @details 정보 유형 코드를 나타냅니다.
+ */
+message Opcode {
+  UnsignedShort value = 1;
+}
+
+/**
+ * @brief 속도 (Speed)
+ * @details 단위: km/h, 범위: 0.00 ~ 150.99
+ */
+message Speed {
+  float value = 1;
+}
+
+/**
+ * @brief 경로 방향 구분 (Route Direction)
+ * @details 상행(기종점행) 또는 하행(종기점행)을 구분합니다.
+ */
+enum RouteDirOd {
+  ROUTE_DIR_OD_UNKNOWN = 0; // 정의되지 않음
+  UPLINE = 1;               // 상행 (기종점행)
+  DOWNLINE = 2;             // 하행 (종기점행)
+}
+
+/**
+ * @brief 정류소 ID (Stop ID)
+ */
+message StopId {
+  string value = 1;
+}
+
+// =======================================================
+// 차량 위치정보
+// =======================================================
+
+/**
+ * @brief 차량 위치정보 (Location)
+ * @details 차량의 실시간 위치 및 관련 정보를 포함합니다.
+ */
+message Location {
+  // 위도: 북위(+), 남위(-). 정밀도 최대 15자리.
+  double latitude = 1;
+
+  // 경도: 동경(+), 서경(-). 정밀도 최대 15자리.
+  double longitude = 2;
+
+  // 방위각: 북쪽 기준 시계방향 각도 (0~360도).
+  float heading = 3;
+
+  // 고도: 해수면 기준 높이 (단위: 미터).
+  float altitude = 4;
+
+  // 시점속도(km/h).
+  Speed speed = 5;
+
+  // 발생시각 (UTC).
+  google.protobuf.Timestamp occur_at = 6;
+
+  // 상행/하행 구분.
+  RouteDirOd route_dir_od = 7;
+
+  // 최종(또는 현재) 정류소 ID.
+  StopId last_stop_id = 8;
+
+  // 최종(또는 현재) 정류소 순번.
+  UnsignedChar last_stop_seq = 9;
+
+  // 최종(또는 현재) 정류소로부터 이동한 거리 (offset, 단위: meter).
+  uint32 last_stop_dist = 10;
+
+  // 기점 정류소로부터 이동한 누적거리 (offset, 단위: meter).
+  uint32 origin_accum_dist = 11;
+}
+
+message EncryptedLocation {
+  // ✅ 이 메시지가 어떤 원본으로부터 변환되는지 명시합니다.
+  option (tmoney.gbi.bms.proto.transform_source) = "tmoney.gbi.bms.proto.Location";
+
+  // 커스텀 옵션을 사용하여 암호화 대상 필드를 직접 표시
+  string latitude = 1 [(tmoney.gbi.bms.proto.encrypt) = true];
+  string longitude = 2 [(tmoney.gbi.bms.proto.encrypt) = true];
+
+  // 방위각: 북쪽 기준 시계방향 각도 (0~360도).
+  float heading = 3;
+
+  // 고도: 해수면 기준 높이 (단위: 미터).
+  float altitude = 4;
+
+  // 시점속도(km/h).
+  Speed speed = 5;
+
+  // 발생시각 (UTC).
+  google.protobuf.Timestamp occur_at = 6;
+
+  // 상행/하행 구분.
+  RouteDirOd route_dir_od = 7;
+
+  // 최종(또는 현재) 정류소 ID.
+  StopId last_stop_id = 8;
+
+  // 최종(또는 현재) 정류소 순번.
+  UnsignedChar last_stop_seq = 9;
+
+  // 최종(또는 현재) 정류소로부터 이동한 거리 (offset, 단위: meter).
+  uint32 last_stop_dist = 10;
+
+  // 기점 정류소로부터 이동한 누적거리 (offset, 단위: meter).
+  uint32 origin_accum_dist = 11;
+}

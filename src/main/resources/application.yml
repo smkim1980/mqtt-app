@@ -1,0 +1,8 @@
+spring:
+  profiles:
+    default: local
+  config:
+    import:
+    - classpath:yaml/application-local.yml
+    - classpath:yaml/application-dev.yml
+    - classpath:yaml/application-prod.yml
