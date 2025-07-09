@@ -4,10 +4,10 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class BmsMqttProcessorAppApplication {
+public class BmsMqttProcessorApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(BmsMqttProcessorAppApplication.class, args);
+        SpringApplication.run(BmsMqttProcessorApplication.class, args);
     }
 
 }

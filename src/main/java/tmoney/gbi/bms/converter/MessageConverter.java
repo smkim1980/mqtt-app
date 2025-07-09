@@ -4,6 +4,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * Protobuf 메시지(byte[])를 특정 DTO 타입으로 변환하는 인터페이스
+ *
  * @param <T> 변환할 DTO 타입
  */
 public interface MessageConverter<T> {
@@ -24,4 +25,7 @@ public interface MessageConverter<T> {
      * @return true if this converter can handle the topic, false otherwise
      */
     boolean canHandle(String topic);
+
+
+    T encrypt(T dto);
 }

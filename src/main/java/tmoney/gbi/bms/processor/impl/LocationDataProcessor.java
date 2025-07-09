@@ -21,7 +21,6 @@ import static tmoney.gbi.bms.common.util.MqttCommUtil.getMessageConverter;
 @RequiredArgsConstructor
 public class LocationDataProcessor implements DataProcessor<EncryptedLocationDto> {
 
-    private final CryptoService cryptoService;
     private final CommonInsertMapper commonInsertMapper;
     private final List<MessageConverter<?>> messageConverters;
 
@@ -40,12 +39,9 @@ public class LocationDataProcessor implements DataProcessor<EncryptedLocationDto
     }
 
     @Override
-    public void process(EncryptedLocationDto dto) {
-        cryptoService.encryptFields(dto);
-    }
-
-    @Override
     public void batchInsert(List<EncryptedLocationDto> batch) {
         commonInsertMapper.insertLocationBatch(batch);
     }
+
+
 }

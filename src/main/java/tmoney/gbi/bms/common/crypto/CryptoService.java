@@ -58,8 +58,8 @@ public class CryptoService {
         }
     }
 
-    public void encryptFields(Object object){
-        if (object == null) { return;}
+    public <T> T encryptFields(T object){
+        if (object == null) { return object;}
         // 캐시에서 암호화할 필드 목록을 가져옵니다.
         List<Field> fieldsToEncrypt = getEncryptableFields(object.getClass());
 
@@ -75,6 +75,8 @@ public class CryptoService {
                 log.error("Security exception. Cannot access field '{}'.", field.getName(), e);
             }
         }
+
+        return object;
     }
 
     /**

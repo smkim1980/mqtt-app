@@ -28,12 +28,6 @@ public interface DataProcessor<T> {
      */
     T convert(QueueModel message) throws Exception;
 
-    /**
-     * DTO에 대한 추가 처리(예: 암호화)를 수행합니다.
-     *
-     * @param dto 처리할 DTO 객체
-     */
-    void process(T dto);
 
     /**
      * DTO 목록을 데이터베이스에 배치 삽입합니다.

@@ -40,10 +40,7 @@ public class BatchProcessorRunnable<T> implements Runnable {
                     }
                     continue;
                 }
-
-                T dto = dataProcessor.convert(message);
-                dataProcessor.process(dto);
-                batchList.add(dto);
+                batchList.add(dataProcessor.convert(message));
 
                 if (batchList.size() >= batchSize) {
                     processBatch(batchList);
@@ -78,9 +75,7 @@ public class BatchProcessorRunnable<T> implements Runnable {
 
             for (QueueModel remainingMessage : remainingMessages) {
                 try {
-                    T remainingDto = dataProcessor.convert(remainingMessage);
-                    dataProcessor.process(remainingDto);
-                    batchList.add(remainingDto);
+                    batchList.add(dataProcessor.convert(remainingMessage));
                 } catch (Exception e) {
                     log.error("[{}] Failed to convert message during batch drain. Skipping message.", processorName, e);
                 }
