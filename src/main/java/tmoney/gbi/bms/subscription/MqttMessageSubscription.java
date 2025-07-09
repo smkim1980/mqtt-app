@@ -5,7 +5,8 @@ import com.github.tocrhz.mqtt.annotation.Payload;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import tmoney.gbi.bms.router.QueueingRouter;
+import tmoney.gbi.bms.common.queue.QueueModel;
+import tmoney.gbi.bms.common.router.QueueingRouter;
 
 import static tmoney.gbi.bms.common.constant.TopicRuleNames.InfoType.*;
 import static tmoney.gbi.bms.common.constant.TopicRuleNames.QOS_1;
@@ -29,7 +30,6 @@ public class MqttMessageSubscription {
             log.warn("Received empty payload on topic: {}", topic);
             return;
         }
-        // 받은 byte[] 메시지를 그대로 라우터에 전달합니다.
-        router.route(topic, payload);
+        router.route(new QueueModel(topic , payload));
     }
 }

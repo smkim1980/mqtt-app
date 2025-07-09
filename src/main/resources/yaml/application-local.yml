@@ -55,5 +55,5 @@ app:
     size: 1000
   db-worker:
     batch-size: 1000
-    threads: 20
+    threads: 10
 

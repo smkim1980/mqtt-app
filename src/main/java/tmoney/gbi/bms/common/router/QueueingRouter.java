@@ -1,10 +1,11 @@
-package tmoney.gbi.bms.router;
+package tmoney.gbi.bms.common.router;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import tmoney.gbi.bms.common.constant.MqttTopic;
 import tmoney.gbi.bms.common.queue.QueueFactory;
+import tmoney.gbi.bms.common.queue.QueueModel;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -16,11 +17,11 @@ import java.util.concurrent.TimeUnit;
 public class QueueingRouter {
     private final QueueFactory queueFactory;
 
-    public void route(String topic, byte[] message) {
-        if (canHandle(topic)) {
-            handle(topic, message);
+    public void route(QueueModel queueModel) {
+        if (canHandle(queueModel.getTopic())) {
+            handle(queueModel);
         } else {
-            throw new IllegalArgumentException("No handler found for topic: " + topic);
+            throw new IllegalArgumentException("No handler found for topic: " + queueModel.getTopic());
         }
     }
 
@@ -30,11 +31,11 @@ public class QueueingRouter {
     }
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
-    private void handle(String topic, byte[] message) {
+    private void handle(QueueModel queueModel) {
         try {
-            queueFactory.getQueue(topic).offer(message , 5, TimeUnit.MILLISECONDS);
+            queueFactory.getQueue(queueModel.getTopic()).offer(queueModel , 5, TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
-            log.error("Interrupted while waiting for queue to fire ::topic:<{}> , MESSAGE <{}>", topic ,new String(message , StandardCharsets.UTF_8));
+            log.error("Interrupted while waiting for queue to fire ::topic:<{}> , MESSAGE <{}>", queueModel.getTopic() ,new String(queueModel.getPayload() , StandardCharsets.UTF_8));
         }
     }
 }

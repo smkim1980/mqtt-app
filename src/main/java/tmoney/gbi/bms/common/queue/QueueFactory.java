@@ -14,7 +14,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class QueueFactory {
 
     private final AppProperties appProperties;
-    private final ConcurrentHashMap<String, BlockingQueue<byte[]>> queues = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, BlockingQueue<QueueModel>> queues = new ConcurrentHashMap<>();
 
     /**
      * 토픽을 기반으로 적절한 큐를 가져옵니다. 큐가 없으면 새로 생성합니다.
@@ -23,7 +23,7 @@ public class QueueFactory {
      * @param topic MQTT topic
      * @return 해당 토픽 그룹을 위한 BlockingQueue
      */
-    public BlockingQueue<byte[]> getQueue(String topic) {
+    public BlockingQueue<QueueModel> getQueue(String topic) {
         String queueName = extractQueueName(topic);
         // appProperties에서 설정된 큐 사이즈를 사용하여 Bounded Queue를 생성합니다.
         return queues.computeIfAbsent(queueName, k -> new LinkedBlockingQueue<>(appProperties.getQueue().getSize()));

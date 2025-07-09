@@ -10,8 +10,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import tmoney.gbi.bms.common.queue.QueueFactory;
+import tmoney.gbi.bms.common.queue.QueueModel;
+import tmoney.gbi.bms.common.router.QueueingRouter;
 import tmoney.gbi.bms.proto.Location;
-import tmoney.gbi.bms.router.QueueingRouter;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -79,11 +80,11 @@ public class MessageProcessingIntegrationTest {
         Instant testStartTime = Instant.now();
 
         locations.forEach(loc -> {
-            router.route(TEST_TOPIC, loc.toByteArray());
+            router.route(new QueueModel(TEST_TOPIC, loc.toByteArray()));
         });
 
         // then
-        BlockingQueue<byte[]> queue = queueFactory.getQueue(TEST_TOPIC);
+        BlockingQueue<QueueModel> queue = queueFactory.getQueue(TEST_TOPIC);
 
         // 1. 모든 메시지가 큐에서 소비되고, DB에 모두 저장될 때까지 대기
         String countSql = "SELECT COUNT(*) FROM ENCRYPTED_LOCATION WHERE occur_dt >= ? AND occur_dt < ?";

@@ -1,7 +1,8 @@
-package tmoney.gbi.bms.converter;
+package tmoney.gbi.bms.converter.impl;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.springframework.stereotype.Component;
+import tmoney.gbi.bms.converter.MessageConverter;
 import tmoney.gbi.bms.model.EncryptedLocationDto;
 import tmoney.gbi.bms.proto.Location;
 

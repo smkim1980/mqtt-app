@@ -1,10 +1,12 @@
 package tmoney.gbi.bms.config.runnable;
 
 import lombok.extern.slf4j.Slf4j;
+import tmoney.gbi.bms.common.queue.QueueModel;
 import tmoney.gbi.bms.processor.DataProcessor;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -12,11 +14,11 @@ import java.util.concurrent.TimeUnit;
 public class BatchProcessorRunnable<T> implements Runnable {
 
     private final String processorName;
-    private final BlockingQueue<byte[]> queue;
+    private final BlockingQueue<QueueModel> queue;
     private final DataProcessor<T> dataProcessor;
     private final int batchSize;
 
-    public BatchProcessorRunnable(String processorName, BlockingQueue<byte[]> queue, DataProcessor<T> dataProcessor, int batchSize) {
+    public BatchProcessorRunnable(String processorName, BlockingQueue<QueueModel> queue, DataProcessor<T> dataProcessor, int batchSize) {
         this.processorName = processorName;
         this.queue = queue;
         this.dataProcessor = dataProcessor;
@@ -30,7 +32,7 @@ public class BatchProcessorRunnable<T> implements Runnable {
 
         while (!Thread.currentThread().isInterrupted()) {
             try {
-                byte[] message = queue.poll(1, TimeUnit.SECONDS);
+                QueueModel message = queue.poll(1 , TimeUnit.SECONDS); // Objects.requireNonNull(queue.poll(1, TimeUnit.SECONDS)).getPayload();
                 if (message == null) {
                     // Process batch if timeout occurs and list is not empty
                     if (!batchList.isEmpty()) {
@@ -71,10 +73,10 @@ public class BatchProcessorRunnable<T> implements Runnable {
         }
         try {
             // Drain remaining messages from the queue to fill up the batch
-            List<byte[]> remainingMessages = new ArrayList<>();
+            List<QueueModel> remainingMessages = new ArrayList<>();
             queue.drainTo(remainingMessages, batchSize - batchList.size());
 
-            for (byte[] remainingMessage : remainingMessages) {
+            for (QueueModel remainingMessage : remainingMessages) {
                 try {
                     T remainingDto = dataProcessor.convert(remainingMessage);
                     dataProcessor.process(remainingDto);

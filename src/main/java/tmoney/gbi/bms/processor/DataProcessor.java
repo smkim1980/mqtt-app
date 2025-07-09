@@ -1,5 +1,7 @@
 package tmoney.gbi.bms.processor;
 
+import tmoney.gbi.bms.common.queue.QueueModel;
+
 import java.util.List;
 
 /**
@@ -24,7 +26,7 @@ public interface DataProcessor<T> {
      * @return 변환된 DTO 객체
      * @throws Exception 변환 중 발생한 예외
      */
-    T convert(byte[] message) throws Exception;
+    T convert(QueueModel message) throws Exception;
 
     /**
      * DTO에 대한 추가 처리(예: 암호화)를 수행합니다.

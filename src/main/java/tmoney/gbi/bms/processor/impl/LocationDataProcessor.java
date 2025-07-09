@@ -3,6 +3,7 @@ package tmoney.gbi.bms.processor.impl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import tmoney.gbi.bms.common.constant.MqttTopic;
+import tmoney.gbi.bms.common.queue.QueueModel;
 import tmoney.gbi.bms.converter.MessageConverter;
 import tmoney.gbi.bms.common.crypto.CryptoService;
 import tmoney.gbi.bms.mapper.CommonInsertMapper;
@@ -10,6 +11,8 @@ import tmoney.gbi.bms.model.EncryptedLocationDto;
 import tmoney.gbi.bms.processor.DataProcessor;
 
 import java.util.List;
+
+import static tmoney.gbi.bms.common.util.MqttCommUtil.getMessageConverter;
 
 /**
  * 위치 정보(EncryptedLocationDto) 처리를 위한 구체적인 전략 클래스.
@@ -32,14 +35,8 @@ public class LocationDataProcessor implements DataProcessor<EncryptedLocationDto
 
     @Override
     @SuppressWarnings("unchecked")
-    public EncryptedLocationDto convert(byte[] message) throws Exception {
-        // 이 프로세서가 지원하는 토픽을 처리할 수 있는 컨버터를 찾음
-        MessageConverter<EncryptedLocationDto> converter = (MessageConverter<EncryptedLocationDto>) messageConverters.stream()
-                .filter(c -> c.canHandle(SUPPORTED_TOPIC))
-                .findFirst()
-                .orElseThrow(() -> new IllegalStateException("No MessageConverter found for topic: " + SUPPORTED_TOPIC));
-
-        return converter.convert(message);
+    public EncryptedLocationDto convert(QueueModel queueModel) throws Exception {
+        return (EncryptedLocationDto) getMessageConverter(SUPPORTED_TOPIC , messageConverters).convert(queueModel.getPayload());
     }
 
     @Override

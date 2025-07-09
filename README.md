@@ -1,287 +1,165 @@
-# Mosquitto MQTT 브로커 Windows 설치 및 설정 가이드
+# MQTT 메시지 처리 애플리케이션 (mqtt-processor-app)
 
-이 가이드는 Windows 환경에서 Mosquitto MQTT 브로커를 설치하고 설정하는 단계별 지침을 제공합니다. 인증 설정과 구독 예제도 포함되어 있습니다.
+이 프로젝트는 MQTT 메시지를 수신하고, 이를 처리하여 데이터베이스에 저장하는 Spring Boot 기반의 애플리케이션입니다.
 
-## 1. Mosquitto 설치 (Windows)
+## 1. 프로젝트 설계 및 구조
 
-### 설치 단계
-1. Mosquitto 설치 파일을 다운로드합니다:
-   - 파일: `./file/mosquitto-2.0.21a-install-windows-x64.exe`
-2. 설치 파일을 실행합니다.
-3. 기본 설정으로 설치를 진행합니다. 일반적으로 `C:\Program Files\mosquitto` 경로에 설치됩니다.
-4. 설치 중 'Service' 관련 옵션이 나타나면, 수동 실행 및 테스트를 위해 체크를 해제하는 것이 편리할 수 있습니다.
-5. **선택 사항**: `mosquitto`, `mosquitto_pub`, `mosquitto_sub` 명령어를 어느 위치에서든 사용할 수 있도록 환경 변수에 Mosquitto 경로를 추가합니다.
-   - **시스템 속성 > 고급 > 환경 변수**로 이동합니다.
-   - `Path` 변수에 `C:\Program Files\mosquitto`를 추가합니다.
+### 1.1. 주요 목적
+다양한 MQTT 토픽을 통해 수신되는 메시지(주로 위치 정보)를 효율적으로 파싱, 암호화, 그리고 배치(Batch) 형태로 데이터베이스에 저장하는 것을 목표로 합니다. 높은 처리량과 안정성을 고려하여 설계되었습니다.
 
-## 2. 인증 설정
+### 1.2. 아키텍처 개요
+애플리케이션은 다음과 같은 주요 흐름으로 동작합니다:
+1.  **메시지 구독:** `MqttMessageSubscription`을 통해 MQTT 브로커의 특정 토픽들을 구독합니다.
+2.  **메시지 라우팅 및 큐잉:** 수신된 메시지는 `QueueingRouter`를 통해 토픽별로 분류되어 인메모리 큐에 저장됩니다. (현재 인메모리 큐 사용)
+3.  **메시지 처리:** `ExceuteProcess`에 의해 시작된 워커 스레드(가상 스레드)들이 큐에서 메시지를 배치 단위로 가져와 `DataProcessor`를 통해 처리합니다.
+4.  **데이터 저장:** 처리된 데이터는 데이터베이스에 배치 삽입됩니다.
 
-MQTT 브로커에 아무나 접속하지 못하도록 사용자 이름과 비밀번호를 설정합니다.
+### 1.3. 주요 모듈 및 역할
 
-### 2.1. 비밀번호 파일 생성
-1. 명령 프롬프트(cmd) 또는 PowerShell을 엽니다.
-2. Mosquitto 설치 폴더로 이동합니다:
-   ```bash
-   cd "C:\Program Files\mosquitto"
-   ```
-3. `mosquitto_passwd.exe` 유틸리티를 사용하여 비밀번호 파일을 생성합니다:
-   - 사용자: `mqtt_user`
-   - 비밀번호: `mqtt_password`
-   - 다음 명령어를 실행하고 `mqtt_password`를 두 번 입력합니다:
-     ```bash
-     mosquitto_passwd.exe -c passwordfile.txt mqtt_user
-     ```
-   - `passwordfile.txt` 파일이 `C:\Program Files\mosquitto` 폴더에 생성됩니다.
+*   `src/main/java/tmoney/gbi/bms/`: 핵심 비즈니스 로직 및 설정 파일
+    *   `BmsMqttProcessorAppApplication.java`: Spring Boot 애플리케이션의 진입점.
+    *   `common/`: 공통 유틸리티 및 상수.
+        *   `constant/`: MQTT 토픽 관련 상수 (`MqttTopic`, `TopicRuleNames`).
+        *   `crypto/CryptoService.java`: 데이터 암호화 서비스.
+        *   `properties/AppProperties.java`: `application.yml`에서 애플리케이션 관련 속성(DB 워커 스레드 수, 배치 크기, 큐 크기, 큐 크기 등)을 로드합니다.
+        *   `queue/QueueFactory.java`: 토픽별 인메모리 큐를 관리하고 제공합니다. (크기 제한 큐 사용)
+        *   `util/MqttCommUtil.java`: MQTT 통신 관련 유틸리티.
+    *   `config/`: 애플리케이션 전반의 설정 및 초기화 로직.
+        *   `AppConfig.java`: 애플리케이션 전반의 설정.
+        *   `MqttConfig.java`: MQTT 클라이언트 설정 (주석 처리됨).
+        *   `ExceuteProcess.java`: 애플리케이션 시작 시 배치 처리 워커 스레드를 초기화하고 실행합니다.
+        *   `async/AsyncConfig.java`: 비동기 작업(DB 워커)을 위한 `Executor` (가상 스레드 기반) 설정.
+    *   `converter/`: Protobuf 메시지를 DTO로 변환하는 로직.
+        *   `MessageConverter.java`: 메시지 변환 인터페이스.
+        *   `LocationMessageConverter.java`: 위치 정보 메시지 변환 구현체.
+    *   `mapper/CommonInsertMapper.java`: MyBatis를 이용한 데이터베이스 삽입 인터페이스.
+    *   `model/`: 데이터 전송 객체(DTO) 정의 (`EncryptedLocationDto`, `LocationDto`).
+    *   `processor/`: 메시지 처리 전략.
+        *   `DataProcessor.java`: 데이터 처리 인터페이스.
+        *   `impl/LocationDataProcessor.java`: 위치 정보 데이터 처리 구현체.
+    *   `router/QueueingRouter.java`: 수신된 메시지를 큐에 라우팅하는 역할.
+    *   `subscription/MqttMessageSubscription.java`: MQTT 토픽을 구독하고 메시지를 수신하는 역할.
+*   `pom.xml`: Maven 빌드 설정 파일.
+*   `src/main/resources/`: 설정 파일 및 SQL 스키마.
+    *   `application.yml`: 기본 애플리케이션 설정.
+    *   `application-*.yml`: 환경별 설정 (dev, local, prod).
+    *   `schema.sql`: 데이터베이스 스키마 정의 (H2 데이터베이스용).
 
-### 2.2. 설정 파일 (`mosquitto.conf`) 작성
-1. `C:\Program Files\mosquitto` 폴더에 `mosquitto.conf`라는 이름으로 새 텍스트 파일을 만듭니다.
-2. 다음 내용을 `mosquitto.conf` 파일에 복사하여 붙여넣습니다:
+### 1.4. 사용 기술
+*   Java 21
+*   Spring Boot
+*   Apache Maven
+*   Eclipse Paho MQTT Client (com.github.tocrhz.mqtt-spring-boot-starter)
+*   Google Protobuf
+*   Lombok
+*   MyBatis
+*   H2 Database (개발/테스트용)
 
-   ```text
-   # =================================================================
-   # 일반 설정
-   # =================================================================
-   # 익명 접속을 허용하지 않음
-   allow_anonymous false
+## 2. 프로젝트 실행 방법
 
-   # =================================================================
-   # 리스너 설정
-   # =================================================================
-   # MQTT 포트 설정
-   listener 1883
-   protocol mqtt
-   ```
+### 2.1. 사전 준비
+*   Java Development Kit (JDK) 21 이상 설치
+*   Apache Maven 3.6 이상 설치
+*   **MQTT 브로커 설치 및 실행:**
+    *   `file/mosquitto-2.0.21a-install-windows-x64.exe` 파일을 사용하여 로컬에 Mosquitto 브로커를 설치할 수 있습니다.
+    *   설치 후 Mosquitto 서비스를 시작합니다.
 
-   **참고**: `password_file` 경로는 `passwordfile.txt` 파일의 실제 위치와 정확히 일치해야 합니다.
+### 2.2. 프로젝트 빌드
+프로젝트 루트 디렉토리(`C:\github\mqtt-processor-app`)에서 다음 Maven 명령어를 실행하여 프로젝트를 빌드합니다.
 
-## 3. Mosquitto 브로커 실행
-1. 명령 프롬프트를 엽니다.
-2. Mosquitto 설치 폴더로 이동합니다:
-   ```bash
-   cd "C:\Program Files\mosquitto"
-   ```
-3. 작성한 `mosquitto.conf` 설정 파일을 사용하여 브로커를 실행합니다. `-v` 옵션은 자세한 로그를 출력하여 연결 상태를 확인하는 데 유용합니다:
-   ```bash
-   mosquitto.exe -c mosquitto.conf -v
-   ```
-4. 브로커가 정상적으로 실행되면 명령 프롬프트 창에서 로그를 출력하며 활성 상태를 유지합니다.
+```bash
+mvn clean install
+```
+또는 실행 가능한 JAR 파일을 생성하려면:
+```bash
+mvn clean package
+```
 
-## 4. MQTT 구독 예제
-브로커가 실행 중인 상태에서 특정 토픽을 구독하여 테스트할 수 있습니다.
+### 2.3. 애플리케이션 실행
+빌드가 성공하면 `target/` 디렉토리에 실행 가능한 JAR 파일이 생성됩니다. 다음 명령어를 사용하여 애플리케이션을 실행합니다.
 
-1. 브로커가 실행 중인 상태에서 새 명령 프롬프트 창을 엽니다.
-2. 다음 명령어를 실행하여 토픽을 구독합니다:
-   - 호스트: `localhost`
-   - 포트: `1883`
-   - 사용자 이름: `mqtt_user`
-   - 비밀번호: `mqtt_password`
-   - 클라이언트 ID: `bms-subscriber-12345` (고유한 ID 사용)
-   - 토픽: `test/topic` (예시 토픽)
+```bash
+java -jar target/mqtt-processor-app-*.jar
+```
+(여기서 `*`는 빌드된 버전에 따라 달라질 수 있습니다. 예: `mqtt-processor-app-0.0.1-SNAPSHOT.jar`)
 
-   ```bash
-   mosquitto_sub -h localhost -p 1883 -u "mqtt_user" -P "mqtt_password" -i "bms-subscriber-12345" -t "test/topic" -d
-   ```
+### 2.4. 설정 변경
+`src/main/resources/application.yml` 또는 `application-local.yml` 등의 파일을 수정하여 애플리케이션의 동작을 설정할 수 있습니다. 주요 설정 항목은 다음과 같습니다:
+*   `app.db-worker.threads`: DB 워커 스레드 수 (각 토픽 그룹당).
+*   `app.db-worker.batch-size`: DB에 한 번에 삽입할 메시지 배치 크기.
+*   `app.queue.size`: 인메모리 큐의 최대 크기.
 
-   **명령어 옵션**:
-   - `-h`: 호스트 주소
-   - `-p`: 포트 번호
-   - `-u`: 사용자 이름
-   - `-P`: 비밀번호
-   - `-i`: 클라이언트 ID
-   - `-t`: 구독할 토픽
-   - `-d`: 디버그 메시지 출력
+## 3. MQTT 메시지 추가 방법
 
-3. 다른 클라이언트에서 `test/topic`으로 메시지를 발행하면, 이 구독 클라이언트 창에 해당 메시지가 표시됩니다.
+이 애플리케이션은 특정 MQTT 토픽으로 Protobuf 형식의 메시지를 수신합니다.
 
----
+### 3.1. 토픽 구조
+메시지를 발행할 토픽은 `MqttTopic.java`에 정의된 규칙을 따릅니다. 기본 구조는 다음과 같습니다:
+`<정보_유형>/<경로_지점>/<인바운드_아웃바운드>`
+예시: `obe/tbus/inb`
 
-# 프로젝트 아키텍처 및 워크플로우
+애플리케이션은 이 토픽 뒤에 `/`와 추가적인 서브 토픽 레벨(예: `obe/tbus/inb/device123`)이 붙는 메시지를 구독합니다.
 
-이 문서는 MQTT 메시지를 수신하여 데이터베이스에 저장하기까지의 전체 과정을 설명합니다. 시스템은 **전략 패턴(Strategy Pattern)**을 기반으로 설계되어, 다양한 데이터 유형을 유연하고 확장 가능하게 처리할 수 있습니다.
+### 3.2. 메시지 형식 (Protobuf)
+메시지 페이로드는 `src/main/proto/bms.proto`에 정의된 `Location` Protobuf 메시지 형식이어야 합니다.
 
-## 핵심 워크플로우
+```protobuf
+// bms.proto 예시
+syntax = "proto3";
 
-메시지 처리 흐름은 다음 5단계로 이루어집니다.
+option java_package = "tmoney.gbi.bms.proto";
+option java_outer_classname = "Location";
 
-1.  **메시지 수신 (Message Reception)**: MQTT 브로커로부터 메시지를 수신합니다.
-2.  **라우팅 및 큐잉 (Routing & Queueing)**: 수신된 메시지를 토픽(Topic)에 따라 적절한 메모리 큐(Queue)에 저장합니다.
-3.  **배치 프로세서 실행 (Batch Processing)**: 백그라운드 스레드에서 주기적으로 큐의 메시지를 가져와 일괄 처리를 시작합니다.
-4.  **데이터 처리 (Data-Specific Processing)**: 전략 패턴을 사용하여 토픽에 맞는 데이터 처리기(DataProcessor)를 선택하고, 데이터 변환, 암호화 등 필요한 로직을 수행합니다.
-5.  **데이터베이스 저장 (Database Insertion)**: 처리된 데이터를 데이터베이스에 일괄 삽입(Batch Insert)합니다.
-
-![Workflow Diagram](https://user-images.githubusercontent.com/12572126/182925368-7a44c1e3-1a6a-47d9-8a4a-5e3b7e6e7e4e.png)  *<-- 다이어그램 예시입니다. 실제 프로젝트 구조에 맞게 수정이 필요할 수 있습니다.*
-
-## 주요 컴포넌트 및 코드 예시
-
-### 1. 메시지 수신 및 라우팅 (`MqttConfig` & `TopicMessageRouter`)
-
--   **`MqttConfig`**: MQTT 브로커 연결 및 메시지 리스너를 설정합니다. 메시지가 도착하면 `@ServiceActivator` 어노테이션이 붙은 메소드가 호출됩니다.
--   **`TopicMessageRouter`**: 수신된 메시지를 처리할 수 있는 핸들러(`MessageHandler`)에게 전달합니다.
-
-```java
-// In: MqttConfig.java
-@Bean
-@ServiceActivator(inputChannel = "mqttInputChannel")
-public MessageHandler handler(TopicMessageRouter<byte[]> router) {
-    return message -> {
-        String topic = (String) message.getHeaders().get(MqttHeaders.RECEIVED_TOPIC);
-        byte[] payload = (byte[]) message.getPayload();
-        router.route(topic, payload);
-    };
+message Location {
+  string device_id = 1;
+  double latitude = 2;
+  double longitude = 3;
+  // ... 기타 필드
 }
 ```
 
-### 2. 메시지 큐잉 (`QueueingMessageHandler` & `QueueFactory`)
+### 3.3. 메시지 발행 방법
 
--   **`QueueingMessageHandler`**: `TopicMessageRouter`로부터 메시지를 받아, 토픽에 맞는 큐에 메시지를 넣습니다.
--   **`QueueFactory`**: 토픽의 앞 3개 레벨(예: `obe/tbus/inb`)을 기준으로 큐를 생성하고 관리합니다. 이를 통해 동일한 그룹의 토픽 메시지는 같은 큐에 쌓이게 됩니다.
+1.  **MQTT 클라이언트 사용:**
+    *   Mosquitto `mosquitto_pub` 명령줄 도구 또는 MQTT Explorer와 같은 GUI 클라이언트를 사용할 수 있습니다.
+    *   `bms.proto`를 사용하여 `Location` 메시지를 Protobuf 바이너리 형식으로 직렬화해야 합니다.
+    *   예시 (Python을 사용하여 Protobuf 메시지 생성 및 발행):
 
-```java
-// In: handler/impl/QueueingMessageHandler.java
-@Override
-public void handle(String topic, byte[] message) {
-    // 토픽에 맞는 큐를 찾아 메시지를 offer 합니다.
-    queueFactory.getQueue(topic).offer(message);
-}
+        ```python
+        # pip install paho-mqtt protobuf
+        import paho.mqtt.publish as publish
+        from google.protobuf.timestamp_pb2 import Timestamp
+        from bms_pb2 import Location # bms.proto를 컴파일하여 생성된 파일
 
-// In: config/queue/QueueFactory.java
-public BlockingQueue<byte[]> getQueue(String topic) {
-    // "obe/tbus/inb/12345" -> "obe/tbus/inb" 키를 추출하여 큐를 찾습니다.
-    String queueName = extractQueueName(topic);
-    return queues.computeIfAbsent(queueName, k -> new LinkedBlockingQueue<>());
-}
-```
+        # Location 메시지 생성
+        location_msg = Location()
+        location_msg.device_id = "test-device-001"
+        location_msg.latitude = 37.5665
+        location_msg.longitude = 126.9780
+        location_msg.last_stop_id.value = "vehicle-A" # 예시 필드
 
-### 3. 배치 프로세서 실행 (`ExceuteProcess`)
+        # 현재 시간 타임스탬프 추가 (occur_at 필드가 있다면)
+        timestamp = Timestamp()
+        timestamp.GetCurrentTime()
+        location_msg.occur_at.CopyFrom(timestamp)
 
--   애플리케이션이 시작되면 `ExceuteProcess`는 `MqttTopicConstants`에 정의된 모든 토픽 접두사에 대해 배치 처리 스레드를 생성하고 실행합니다.
--   `ProcessorProvider`를 통해 각 토픽 그룹을 처리할 `DataProcessor` (전략)를 찾아 `BatchProcessorRunnable`에 주입합니다.
 
-```java
-// In: config/ExceuteProcess.java
-@Override
-public void startBatchProcessors() {
-    List<String> topicPrefixes = MqttTopicConstants.TOPIC_PREFIXES;
+        # Protobuf 메시지를 바이트로 직렬화
+        payload = location_msg.SerializeToString()
 
-    for (String topicPrefix : topicPrefixes) {
-        // 1. 토픽에 맞는 프로세서(전략)를 찾습니다.
-        DataProcessor<?> dataProcessor = processorProvider.getProcessor(topicPrefix);
-        if (dataProcessor == null) continue;
+        # MQTT 메시지 발행
+        broker_address = "localhost" # 또는 MQTT 브로커의 IP 주소
+        topic = "obe/tbus/inb/device-data" # 애플리케이션이 구독하는 토픽
 
-        // 2. 스레드 수만큼 범용 Runnable을 생성하여 실행합니다.
-        for (int i = 0; i < threadCount; i++) {
-            BatchProcessorRunnable<?> processorRunnable = new BatchProcessorRunnable<>(
-                    topicPrefix + "-Processor-" + i,
-                    queueFactory.getQueue(topicPrefix),
-                    dataProcessor,
-                    batchSize
-            );
-            dbWorkerExecutor.execute(processorRunnable);
-        }
-    }
-}
-```
+        print(f"Publishing to topic: {topic}")
+        print(f"Payload (bytes): {payload}")
 
-### 4. 데이터 처리 (전략 패턴: `DataProcessor` & `LocationDataProcessor`)
+        publish.single(topic, payload, hostname=broker_address)
+        print("Message published.")
+        ```
+        (참고: `bms_pb2.py` 파일은 `protoc --python_out=. bms.proto` 명령으로 생성할 수 있습니다.)
 
--   **`DataProcessor<T>`**: 데이터 처리 전략에 대한 인터페이스입니다. 데이터 변환, 처리, DB 저장을 정의합니다.
--   **`LocationDataProcessor`**: `EncryptedLocationDto` 타입의 데이터를 처리하는 구체적인 전략 클래스입니다.
-
-```java
-// In: config/processor/DataProcessor.java (Interface)
-public interface DataProcessor<T> {
-    boolean supports(String topicPrefix); // 어떤 토픽을 지원하는지
-    T convert(byte[] message) throws Exception; // 데이터 변환
-    void process(T dto); // 데이터 처리 (예: 암호화)
-    void batchInsert(List<T> batch); // DB 저장
-}
-
-// In: config/processor/LocationDataProcessor.java (Implementation)
-@Component
-@RequiredArgsConstructor
-public class LocationDataProcessor implements DataProcessor<EncryptedLocationDto> {
-    // ... 의존성 주입 ...
-
-    @Override
-    public boolean supports(String topicPrefix) {
-        // 이 프로세서는 모든 토픽을 지원한다고 가정
-        return true;
-    }
-    // ... convert, process, batchInsert 메소드 구현 ...
-}
-```
-
-### 5. 범용 배치 실행 및 DB 저장 (`BatchProcessorRunnable`)
-
--   `BatchProcessorRunnable`은 특정 데이터 타입에 종속되지 않는 범용 실행자입니다.
--   주기적으로 큐를 확인(`poll`)하고, 메시지가 있으면 주입된 `DataProcessor` 전략을 사용하여 변환, 처리, 배치를 구성합니다.
--   배치가 가득 차거나 타임아웃이 발생하면 `dataProcessor.batchInsert()`를 호출하여 DB에 최종 저장합니다.
-
-```java
-// In: config/processor/BatchProcessorRunnable.java
-@Override
-public void run() {
-    while (!Thread.currentThread().isInterrupted()) {
-        // ... 큐에서 메시지를 꺼내고 배치 리스트(batchList)를 만듭니다 ...
-        
-        T dto = dataProcessor.convert(message); // 1. 변환 (전략 위임)
-        dataProcessor.process(dto);             // 2. 처리 (전략 위임)
-        batchList.add(dto);
-
-        if (batchList.size() >= batchSize) {
-            processBatch(batchList); // 3. DB 저장 로직 호출
-        }
-    }
-}
-
-private void processBatch(List<T> batchList) {
-    // ...
-    dataProcessor.batchInsert(batchList); // 4. 최종 저장 (전략 위임)
-    // ...
-}
-```
-
-## 새로운 데이터 타입 추가 방법
-
-이 아키텍처의 가장 큰 장점은 확장성입니다. 새로운 종류의 메시지(예: `StatusDto`)를 처리하려면 다음 두 단계만 수행하면 됩니다.
-
-1.  **새로운 DTO와 Mapper 메소드 생성**:
-    -   `StatusDto.java` 모델을 생성합니다.
-    -   `CommonInsertMapper.java` 인터페이스와 `common-insert-mapper.xml`에 `insertStatusBatch`와 같은 새로운 배치 삽입 메소드를 추가합니다.
-
-2.  **새로운 `DataProcessor` 구현체 생성**:
-    -   `DataProcessor<StatusDto>`를 구현하는 `StatusDataProcessor.java` 클래스��� 새로 만듭니다.
-    -   `supports()` 메소드에 이 프로세서가 처리할 토픽(예: `topicPrefix.startsWith("status/")`)을 명시합니다.
-    -   `convert`, `process`, `batchInsert` 메소드를 `StatusDto`에 맞게 구현합니다.
-
-```java
-// 예시: StatusDataProcessor.java
-@Component
-@RequiredArgsConstructor
-public class StatusDataProcessor implements DataProcessor<StatusDto> {
-    // ... Status 관련 의존성 주입 ...
-
-    @Override
-    public boolean supports(String topicPrefix) {
-        // "status/"로 시작하는 토픽만 처리
-        return topicPrefix.startsWith("status/");
-    }
-
-    @Override
-    public StatusDto convert(byte[] message) throws Exception {
-        // byte[] -> StatusDto 변환 로직
-    }
-
-    @Override
-    public void process(StatusDto dto) {
-        // StatusDto에 필요한 처리 (없으면 비워둠)
-    }
-
-    @Override
-    public void batchInsert(List<StatusDto> batch) {
-        commonInsertMapper.insertStatusBatch(batch);
-    }
-}
-```
-
-위와 같이 클래스를 추가하고 애플리케이션을 재시작하면, 별도의 설정 변경 없이 "status/"로 시작하는 모든 토픽의 메시지가 자동으로 처리됩니다.
+2.  **샘플 HTTP 요청 사용 (개발/테스트용):**
+    *   `bmsPublisher.http` 파일은 IntelliJ IDEA의 HTTP 클라이언트와 같은 도구를 사용하여 샘플 MQTT 메시지를 발행하는 방법을 보여줍니다.
+    *   이 요청은 내부적으로 `MqttProtobufTestController`를 호출하여 미리 정의된 Protobuf 메시지를 MQTT 브로커로 발행합니다.
+    *   이 방법은 실제 MQTT 클라이언트를 설정하지 않고도 애플리케이션의 메시지 처리 흐름을 테스트하는 데 유용합니다.
