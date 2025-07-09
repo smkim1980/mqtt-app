@@ -1,4 +1,4 @@
-package tmoney.gbi.bms.common.converter;
+package tmoney.gbi.bms.converter;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 

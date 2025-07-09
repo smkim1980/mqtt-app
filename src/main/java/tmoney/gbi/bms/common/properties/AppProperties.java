@@ -1,4 +1,4 @@
-package tmoney.gbi.bms.config.properties;
+package tmoney.gbi.bms.common.properties;
 
 import lombok.Getter;
 import lombok.Setter;

@@ -19,7 +19,7 @@
 MQTT 브로커에 아무나 접속하지 못하도록 사용자 이름과 비밀번호를 설정합니다.
 
 ### 2.1. 비밀번호 파일 생성
-1. 명�� 프롬프트(cmd) 또는 PowerShell을 엽니다.
+1. 명령 프롬프트(cmd) 또는 PowerShell을 엽니다.
 2. Mosquitto 설치 폴더로 이동합니다:
    ```bash
    cd "C:\Program Files\mosquitto"
@@ -44,13 +44,10 @@ MQTT 브로커에 아무나 접속하지 못하도록 사용자 이름과 비밀
    # 익명 접속을 허용하지 않음
    allow_anonymous false
 
-   # 비밀번호 파일의 절대 경로 지정
-   password_file "C:\Program Files\mosquitto\passwordfile.txt"
-
    # =================================================================
    # 리스너 설정
    # =================================================================
-   # 기�� MQTT 포트 설정
+   # MQTT 포트 설정
    listener 1883
    protocol mqtt
    ```

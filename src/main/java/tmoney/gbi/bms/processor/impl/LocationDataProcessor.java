@@ -1,11 +1,13 @@
-package tmoney.gbi.bms.config.processor;
+package tmoney.gbi.bms.processor.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import tmoney.gbi.bms.common.converter.LocationMessageConverter;
+import tmoney.gbi.bms.common.constant.MqttTopic;
+import tmoney.gbi.bms.converter.MessageConverter;
 import tmoney.gbi.bms.common.crypto.CryptoService;
 import tmoney.gbi.bms.mapper.CommonInsertMapper;
 import tmoney.gbi.bms.model.EncryptedLocationDto;
+import tmoney.gbi.bms.processor.DataProcessor;
 
 import java.util.List;
 
@@ -16,20 +18,28 @@ import java.util.List;
 @RequiredArgsConstructor
 public class LocationDataProcessor implements DataProcessor<EncryptedLocationDto> {
 
-    private final LocationMessageConverter locationConverter;
     private final CryptoService cryptoService;
     private final CommonInsertMapper commonInsertMapper;
+    private final List<MessageConverter<?>> messageConverters;
+
+    private static final String SUPPORTED_TOPIC = MqttTopic.OBE_TBUS_INB.getTopicString();
 
     @Override
     public boolean supports(String topic) {
-        // "obe" 또는 "bit"로 시작하는 토픽을 지원합니다.
-        return topic.startsWith(tmoney.gbi.bms.common.constant.TopicRuleNames.InfoType.OBE) || 
-               topic.startsWith(tmoney.gbi.bms.common.constant.TopicRuleNames.InfoType.BIT);
+        // 이 프로세서는 정확히 일치하는 토픽만 지원합니다.
+        return SUPPORTED_TOPIC.equals(topic);
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public EncryptedLocationDto convert(byte[] message) throws Exception {
-        return locationConverter.convert(message);
+        // 이 프로세서가 지원하는 토픽을 처리할 수 있는 컨버터를 찾음
+        MessageConverter<EncryptedLocationDto> converter = (MessageConverter<EncryptedLocationDto>) messageConverters.stream()
+                .filter(c -> c.canHandle(SUPPORTED_TOPIC))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("No MessageConverter found for topic: " + SUPPORTED_TOPIC));
+
+        return converter.convert(message);
     }
 
     @Override

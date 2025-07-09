@@ -1,6 +1,7 @@
-package tmoney.gbi.bms.config.processor;
+package tmoney.gbi.bms.config.runnable;
 
 import lombok.extern.slf4j.Slf4j;
+import tmoney.gbi.bms.processor.DataProcessor;
 
 import java.util.ArrayList;
 import java.util.List;

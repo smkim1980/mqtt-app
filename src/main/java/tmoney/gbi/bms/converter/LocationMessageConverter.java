@@ -1,4 +1,4 @@
-package tmoney.gbi.bms.common.converter;
+package tmoney.gbi.bms.converter;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.springframework.stereotype.Component;
@@ -7,10 +7,10 @@ import tmoney.gbi.bms.proto.Location;
 
 import java.time.Instant;
 
+import static tmoney.gbi.bms.common.constant.MqttTopic.OBE_TBUS_INB;
+
 @Component
 public class LocationMessageConverter implements MessageConverter<EncryptedLocationDto> {
-
-    
 
     @Override
     public EncryptedLocationDto convert(byte[] message) throws InvalidProtocolBufferException {
@@ -28,7 +28,6 @@ public class LocationMessageConverter implements MessageConverter<EncryptedLocat
 
     @Override
     public boolean canHandle(String topic) {
-        // 이 컨버터는 "obe/" 또는 "bit/"로 시작하는 토픽을 처리합니다.
-        return topic != null && (topic.startsWith("obe/") || topic.startsWith("bit/"));
+        return topic != null && topic.equals(OBE_TBUS_INB.getTopicString());
     }
 }

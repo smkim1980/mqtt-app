@@ -1,11 +1,9 @@
-package tmoney.gbi.bms.config.processor;
+package tmoney.gbi.bms.config.runnable;
 
 import org.springframework.stereotype.Component;
+import tmoney.gbi.bms.processor.DataProcessor;
 
 import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * 토픽에 맞는 DataProcessor를 제공하는 팩토리 클래스.

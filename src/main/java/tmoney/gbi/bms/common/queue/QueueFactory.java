@@ -1,14 +1,19 @@
-package tmoney.gbi.bms.config.queue;
+package tmoney.gbi.bms.common.queue;
 
+import io.micrometer.common.util.StringUtils;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import tmoney.gbi.bms.common.properties.AppProperties;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 
 @Component
+@RequiredArgsConstructor
 public class QueueFactory {
 
+    private final AppProperties appProperties;
     private final ConcurrentHashMap<String, BlockingQueue<byte[]>> queues = new ConcurrentHashMap<>();
 
     /**
@@ -20,7 +25,8 @@ public class QueueFactory {
      */
     public BlockingQueue<byte[]> getQueue(String topic) {
         String queueName = extractQueueName(topic);
-        return queues.computeIfAbsent(queueName, k -> new LinkedBlockingQueue<>());
+        // appProperties에서 설정된 큐 사이즈를 사용하여 Bounded Queue를 생성합니다.
+        return queues.computeIfAbsent(queueName, k -> new LinkedBlockingQueue<>(appProperties.getQueue().getSize()));
     }
 
     /**
@@ -31,8 +37,8 @@ public class QueueFactory {
      * @return The queue name (topic prefix)
      */
     private String extractQueueName(String topic) {
-        if (topic == null || topic.isEmpty()) {
-            return "default";
+        if (StringUtils.isBlank(topic)) {
+            throw new IllegalArgumentException("topic cannot be blank");
         }
         String[] parts = topic.split("/");
         if (parts.length >= 3) {

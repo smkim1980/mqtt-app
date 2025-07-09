@@ -4,20 +4,22 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import tmoney.gbi.bms.common.constant.MqttTopic;
-import tmoney.gbi.bms.config.processor.BatchProcessorRunnable;
-import tmoney.gbi.bms.config.processor.DataProcessor;
-import tmoney.gbi.bms.config.processor.ProcessorProvider;
-import tmoney.gbi.bms.config.properties.AppProperties;
-import tmoney.gbi.bms.config.queue.QueueFactory;
+import tmoney.gbi.bms.common.properties.AppProperties;
+import tmoney.gbi.bms.common.queue.QueueFactory;
+import tmoney.gbi.bms.config.runnable.BatchProcessorRunnable;
+import tmoney.gbi.bms.config.runnable.ProcessorProvider;
+import tmoney.gbi.bms.processor.DataProcessor;
 
 import javax.annotation.PostConstruct;
-import java.util.List;
+import java.util.Arrays;
+import java.util.Objects;
 import java.util.concurrent.Executor;
+import java.util.stream.IntStream;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class ExceuteProcess implements ProcessInterface {
+public class ExceuteProcess {
 
     private final AppProperties appProperties;
     private final Executor dbWorkerExecutor;
@@ -25,38 +27,36 @@ public class ExceuteProcess implements ProcessInterface {
     private final ProcessorProvider processorProvider;
 
     @PostConstruct
-    public void init() {
-        startBatchProcessors();
-    }
-
-    @Override
     public void startBatchProcessors() {
-        int threadCount = appProperties.getDbWorker().getThreads();
-        int batchSize = appProperties.getDbWorker().getBatchSize();
-        String[] topics = MqttTopic.getAllTopicsAsArray();
+        final int threadCount = appProperties.getDbWorker().getThreads();
+        final int batchSize = appProperties.getDbWorker().getBatchSize();
 
-        for (String topic : topics) {
-            DataProcessor<?> dataProcessor = processorProvider.getProcessor(topic);
+        Arrays.stream(MqttTopic.getAllTopicsAsArray())
+                .map(topic -> {
+                    DataProcessor<?> processor = processorProvider.getProcessor(topic);
+                    if (processor == null) {
+                        log.warn("No processor found for topic: '{}'. Skipping.", topic);
+                        return null; // 처리할 프로세서가 없는 경우 null 반환
+                    }
+                    return new Object[]{topic, processor}; // 토픽과 프로세서를 함께 전달
+                })
+                .filter(Objects::nonNull) // 프로세서가 없는 토픽은 제외
+                .forEach(topicAndProcessor -> {
+                    String topic = (String) topicAndProcessor[0];
+                    DataProcessor<?> processor = (DataProcessor<?>) topicAndProcessor[1];
 
-            if (dataProcessor == null) {
-                log.warn("No processor found for topic: '{}'. Skipping.", topic);
-                continue;
-            }
+                    log.info("Initializing {} batch processors for topic group: '{}' with processor: {}",
+                            threadCount, topic, processor.getClass().getSimpleName());
 
-            log.info("Initializing batch processors for topic group: '{}' with processor: {}",
-                    topic, dataProcessor.getClass().getSimpleName());
-
-            for (int i = 0; i < threadCount; i++) {
-                // DataProcessor가 제네릭을 사용하므로, 이를 사용하는 Runnable도 제네릭 타입이어야 합니다.
-                // ? 와일드카드를 사용하여 이를 해결합니다.
-                BatchProcessorRunnable<?> processorRunnable = new BatchProcessorRunnable<>(
-                        topic + "-Processor-" + i,
-                        queueFactory.getQueue(topic),
-                        dataProcessor,
-                        batchSize
-                );
-                dbWorkerExecutor.execute(processorRunnable);
-            }
-        }
+                    // 지정된 스레드 수만큼 처리기(Runnable)를 생성하여 가상 스레드로 실행
+                    IntStream.range(0, threadCount)
+                            .mapToObj(i -> new BatchProcessorRunnable<>(
+                                    topic + "-Processor-" + i,
+                                    queueFactory.getQueue(topic),
+                                    processor,
+                                    batchSize
+                            ))
+                            .forEach(dbWorkerExecutor::execute);
+                });
     }
 }

@@ -9,9 +9,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
-import tmoney.gbi.bms.config.queue.QueueFactory;
+import tmoney.gbi.bms.common.queue.QueueFactory;
 import tmoney.gbi.bms.proto.Location;
-import tmoney.gbi.bms.router.TopicMessageRouter;
+import tmoney.gbi.bms.router.QueueingRouter;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -32,7 +32,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class MessageProcessingIntegrationTest {
 
     @Autowired
-    private TopicMessageRouter<byte[]> topicMessageRouter;
+    private QueueingRouter router;
 
     @Autowired
     private QueueFactory queueFactory;
@@ -79,7 +79,7 @@ public class MessageProcessingIntegrationTest {
         Instant testStartTime = Instant.now();
 
         locations.forEach(loc -> {
-            topicMessageRouter.route(TEST_TOPIC, loc.toByteArray());
+            router.route(TEST_TOPIC, loc.toByteArray());
         });
 
         // then

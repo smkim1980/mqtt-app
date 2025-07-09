@@ -1,4 +1,4 @@
-package tmoney.gbi.bms.config.processor;
+package tmoney.gbi.bms.processor;
 
 import java.util.List;
 
