@@ -10,6 +10,7 @@ import static tmoney.gbi.bms.common.constant.TopicRuleNames.InbOutB.INB;
 import static tmoney.gbi.bms.common.constant.TopicRuleNames.InbOutB.OUTB;
 import static tmoney.gbi.bms.common.constant.TopicRuleNames.InfoType.*;
 import static tmoney.gbi.bms.common.constant.TopicRuleNames.RoutePoint.*;
+import static tmoney.gbi.bms.common.constant.TopicRuleNames.SLASH;
 
 @Getter
 public enum MqttTopic {
@@ -126,8 +127,6 @@ public enum MqttTopic {
     private final String infoType;
     private final String routePoint;
     private final String inbOutb;
-
-    private static final String SLASH = "/";
 
     MqttTopic(String infoType, String routePoint, String inbOutb) {
         this.infoType = infoType;
