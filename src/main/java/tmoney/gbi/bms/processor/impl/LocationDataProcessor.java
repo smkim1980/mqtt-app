@@ -40,7 +40,9 @@ public class LocationDataProcessor implements DataProcessor<EncryptedLocationDto
 
     @Override
     public void batchInsert(List<EncryptedLocationDto> batch) {
-        commonInsertMapper.insertLocationBatch(batch);
+        for (EncryptedLocationDto dto : batch) {
+            commonInsertMapper.insertLocation(dto); // 단일 insert 메소드 호출
+        }
     }
 
 

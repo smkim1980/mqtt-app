@@ -33,6 +33,7 @@ public class BatchProcessorRunnable<T> implements Runnable {
         while (!Thread.currentThread().isInterrupted()) {
             try {
                 QueueModel message = queue.poll(1 , TimeUnit.SECONDS); // Objects.requireNonNull(queue.poll(1, TimeUnit.SECONDS)).getPayload();
+
                 if (message == null) {
                     // Process batch if timeout occurs and list is not empty
                     if (!batchList.isEmpty()) {
