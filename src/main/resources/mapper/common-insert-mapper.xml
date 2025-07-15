@@ -2,18 +2,21 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="tmoney.gbi.bms.mapper.CommonInsertMapper">
 
-    <insert id="insertLocationBatch" parameterType="java.util.List">
-        INSERT INTO ENCRYPTED_LOCATION (device_id, vehicle_id, encrypted_latitude, encrypted_longitude, occur_dt)
-        VALUES
-        <foreach collection="list" item="item" separator=",">
-            (
-            #{item.deviceId, jdbcType=VARCHAR},
-            #{item.vehicleId, jdbcType=VARCHAR},
-            #{item.encryptedLatitude, jdbcType=VARCHAR},
-            #{item.encryptedLongitude, jdbcType=VARCHAR},
-            #{item.occurDt, jdbcType=BIGINT}
-            )
-        </foreach>
+    <insert id="insertLocation" parameterType="encryptedLocationDto">
+        INSERT INTO ENCRYPTED_LOCATION (
+            device_id,
+            vehicle_id,
+            encrypted_latitude,
+            encrypted_longitude,
+            occur_dt
+        )
+        VALUES (
+                   #{deviceId},
+                   #{vehicleId},
+                   #{encryptedLatitude},
+                   #{encryptedLongitude},
+                   #{occurDt}
+               )
     </insert>
 
 </mapper>

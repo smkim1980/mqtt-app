@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import tmoney.gbi.bms.common.properties.AppProperties;
 
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -14,7 +15,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class QueueFactory {
 
     private final AppProperties appProperties;
-    private final ConcurrentHashMap<String, BlockingQueue<QueueModel>> queues = new ConcurrentHashMap<>();
+    private final Map<String, BlockingQueue<QueueModel>> queues = new ConcurrentHashMap<>();
 
     /**
      * 토픽을 기반으로 적절한 큐를 가져옵니다. 큐가 없으면 새로 생성합니다.

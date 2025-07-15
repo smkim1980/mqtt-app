@@ -13,6 +13,6 @@ public interface CommonInsertMapper {
      *
      * @param list a list of EncryptedLocationDto objects
      */
-    void insertLocationBatch(List<EncryptedLocationDto> list);
+    void insertLocation(EncryptedLocationDto dto);
 
 }
