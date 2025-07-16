@@ -29,7 +29,7 @@ mqtt:
   uri: tcp://localhost:1883
   client-id: bms-subscriber
   username: mqtt_user
-  password: mqtt_password
+  password: mqtt
   clean-session: false
   automatic-reconnect: true
   default-publish-qos: 1
@@ -47,7 +47,7 @@ mybatis:
       JDBCType-for-null: 'NULL'
       use-generated-keys: true
   mapper-locations: classpath:mapper/*.xml
-  type-aliases-package: tmoney.gbi.bms.domain
+  type-aliases-package: tmoney.gbi.bms.model
   executor-type: batch
 
 

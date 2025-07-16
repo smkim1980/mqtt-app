@@ -35,7 +35,7 @@ public class LocationDataProcessor implements DataProcessor<EncryptedLocationDto
     @Override
     @SuppressWarnings("unchecked")
     public EncryptedLocationDto convert(QueueModel queueModel) throws Exception {
-        return (EncryptedLocationDto) getMessageConverter(SUPPORTED_TOPIC , messageConverters).convert(queueModel.getPayload());
+        return (EncryptedLocationDto) getMessageConverter(SUPPORTED_TOPIC , messageConverters).convert(queueModel);
     }
 
     @Override

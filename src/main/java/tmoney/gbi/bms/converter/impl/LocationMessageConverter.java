@@ -4,7 +4,9 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import tmoney.gbi.bms.common.crypto.CryptoService;
+import tmoney.gbi.bms.common.queue.QueueModel;
 import tmoney.gbi.bms.converter.MessageConverter;
+import tmoney.gbi.bms.mapper.CommonInsertMapper;
 import tmoney.gbi.bms.model.EncryptedLocationDto;
 import tmoney.gbi.bms.proto.Location;
 
@@ -18,9 +20,11 @@ public class LocationMessageConverter implements MessageConverter<EncryptedLocat
 
     private final CryptoService cryptoService;
 
+    private final CommonInsertMapper mapper;
+
     @Override
-    public EncryptedLocationDto convert(byte[] message) throws InvalidProtocolBufferException {
-        Location locationProto = Location.parseFrom(message);
+    public EncryptedLocationDto convert(QueueModel queueModel ) throws InvalidProtocolBufferException {
+        Location locationProto = Location.parseFrom(queueModel.getPayload());
 
         EncryptedLocationDto dto = new EncryptedLocationDto();
         dto.setDeviceId("device-from-proto"); // 예시
