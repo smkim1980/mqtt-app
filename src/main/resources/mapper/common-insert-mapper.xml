@@ -19,4 +19,16 @@
                )
     </insert>
 
+    <select id="readLocation" parameterType="String">
+        select
+            device_id,
+            vehicle_id,
+            encrypted_latitude,
+            encrypted_longitude,
+            occur_dt
+            from ENCRYPTED_LOCATION
+        where device_id = #{deviceId}
+
+    </select>
+
 </mapper>

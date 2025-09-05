@@ -5,7 +5,6 @@ import org.springframework.stereotype.Component;
 import tmoney.gbi.bms.common.constant.MqttTopic;
 import tmoney.gbi.bms.common.queue.QueueModel;
 import tmoney.gbi.bms.converter.MessageConverter;
-import tmoney.gbi.bms.common.crypto.CryptoService;
 import tmoney.gbi.bms.mapper.CommonInsertMapper;
 import tmoney.gbi.bms.model.EncryptedLocationDto;
 import tmoney.gbi.bms.processor.DataProcessor;
@@ -40,10 +39,9 @@ public class LocationDataProcessor implements DataProcessor<EncryptedLocationDto
 
     @Override
     public void batchInsert(List<EncryptedLocationDto> batch) {
+        if(true) {throw new RuntimeException("Exception Test");}
         for (EncryptedLocationDto dto : batch) {
             commonInsertMapper.insertLocation(dto); // 단일 insert 메소드 호출
         }
     }
-
-
 }

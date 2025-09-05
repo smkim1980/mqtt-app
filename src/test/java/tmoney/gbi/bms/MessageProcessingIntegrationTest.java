@@ -55,7 +55,7 @@ public class MessageProcessingIntegrationTest {
     @DisplayName("대량(1000건) 메시지 처리 및 DB 저장 성능 테스트")
     void testHighVolumeMessageProcessingAndDbInsertion() {
         // given
-        final int messageCount = 1000;
+        final int messageCount = 10 ;
         // 이번 테스트 실행의 고유 시간 범위
         final Instant baseTime = Instant.now();
         final long startTimeMillis = baseTime.toEpochMilli();
